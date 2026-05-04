@@ -35,7 +35,14 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.45 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+  font:
+    14px/1.45 'SF Mono',
+    'Fira Code',
+    'Cascadia Code',
+    'JetBrains Mono',
+    Menlo,
+    Consolas,
+    monospace;
 }
 
 button,

@@ -1,6 +1,10 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 
-import type { DiffWorkerResponse, ParseSnapshotSuccess, RunDiffSuccess } from '../core/model/worker'
+import type {
+  DiffWorkerResponse,
+  ParseSnapshotSuccess,
+  RunDiffSuccess,
+} from '../core/model/worker'
 import type { DiffResult, Snapshot } from '../core/model/types'
 
 const SAMPLE_SQL_A = `-- Snapshot A
@@ -65,7 +69,10 @@ export function useDiffSession() {
       return false
     }
 
-    return leftSql.value !== lastDiffLeftSql.value || rightSql.value !== lastDiffRightSql.value
+    return (
+      leftSql.value !== lastDiffLeftSql.value ||
+      rightSql.value !== lastDiffRightSql.value
+    )
   })
 
   const stats = computed(() => {
@@ -99,7 +106,9 @@ export function useDiffSession() {
       return worker
     }
 
-    worker = new Worker(new URL('../workers/diff.worker.ts', import.meta.url), { type: 'module' })
+    worker = new Worker(new URL('../workers/diff.worker.ts', import.meta.url), {
+      type: 'module',
+    })
     worker.addEventListener('message', handleWorkerMessage)
     worker.addEventListener('error', handleWorkerError)
 
@@ -121,7 +130,9 @@ export function useDiffSession() {
   function handleWorkerError(event: ErrorEvent) {
     for (const [id, deferred] of pending.entries()) {
       pending.delete(id)
-      deferred.reject(new Error(event.message || 'Worker failed to process request.'))
+      deferred.reject(
+        new Error(event.message || 'Worker failed to process request.'),
+      )
     }
   }
 
@@ -156,7 +167,10 @@ export function useDiffSession() {
       leftPreview.value = (leftResponse as ParseSnapshotSuccess).snapshot
       rightPreview.value = (rightResponse as ParseSnapshotSuccess).snapshot
     } catch (caught) {
-      error.value = caught instanceof Error ? caught.message : 'Failed to preview snapshots.'
+      error.value =
+        caught instanceof Error
+          ? caught.message
+          : 'Failed to preview snapshots.'
     } finally {
       busy.value = false
     }
@@ -182,7 +196,8 @@ export function useDiffSession() {
       lastDiffRightSql.value = rightSql.value
       activeView.value = 'diff'
     } catch (caught) {
-      error.value = caught instanceof Error ? caught.message : 'Failed to run diff.'
+      error.value =
+        caught instanceof Error ? caught.message : 'Failed to run diff.'
     } finally {
       busy.value = false
     }
@@ -206,7 +221,9 @@ export function useDiffSession() {
 
   onBeforeUnmount(() => {
     for (const [, deferred] of pending.entries()) {
-      deferred.reject(new Error('Diff session closed before worker request completed.'))
+      deferred.reject(
+        new Error('Diff session closed before worker request completed.'),
+      )
     }
 
     pending.clear()

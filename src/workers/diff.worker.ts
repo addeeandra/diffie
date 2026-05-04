@@ -1,6 +1,9 @@
 /// <reference lib="webworker" />
 
-import type { DiffWorkerRequest, DiffWorkerResponse } from '../core/model/worker'
+import type {
+  DiffWorkerRequest,
+  DiffWorkerResponse,
+} from '../core/model/worker'
 
 import { diffSnapshots } from '../core/diff/diffSnapshots'
 import { parseInsertDump } from '../core/postgres/parseInsertDump'
@@ -14,7 +17,8 @@ ctx.onmessage = (event: MessageEvent<DiffWorkerRequest>) => {
     const response = handleRequest(request)
     ctx.postMessage(response)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown worker error.'
+    const message =
+      error instanceof Error ? error.message : 'Unknown worker error.'
     const failure: DiffWorkerResponse = {
       id: request.id,
       type: 'error',

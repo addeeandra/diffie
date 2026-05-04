@@ -1,6 +1,9 @@
 import type { CellChange, RowData } from '../model/types'
 
-export function compareRows(left: RowData, right: RowData): Record<string, CellChange> {
+export function compareRows(
+  left: RowData,
+  right: RowData,
+): Record<string, CellChange> {
   const changes: Record<string, CellChange> = {}
   const columns = new Set([...Object.keys(left), ...Object.keys(right)])
 

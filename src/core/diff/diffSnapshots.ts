@@ -1,4 +1,11 @@
-import type { DiffResult, RowData, RowDiff, Snapshot, TableDiff, TableSummary } from '../model/types'
+import type {
+  DiffResult,
+  RowData,
+  RowDiff,
+  Snapshot,
+  TableDiff,
+  TableSummary,
+} from '../model/types'
 
 import { compareRows } from './compareRows'
 import { detectTableKey } from './detectTableKey'
@@ -25,7 +32,12 @@ export function diffSnapshots(left: Snapshot, right: Snapshot): DiffResult {
     const autoKeyColumns = resolveAutoKeyColumns(tableName, leftRows, rightRows)
 
     if (autoKeyColumns.length > 0) {
-      diff[tableName] = buildKeyedTableDiff(columns, leftRows, rightRows, autoKeyColumns)
+      diff[tableName] = buildKeyedTableDiff(
+        columns,
+        leftRows,
+        rightRows,
+        autoKeyColumns,
+      )
       continue
     }
 
@@ -35,7 +47,11 @@ export function diffSnapshots(left: Snapshot, right: Snapshot): DiffResult {
   return diff
 }
 
-function resolveAutoKeyColumns(tableName: string, leftRows: RowData[], rightRows: RowData[]): string[] {
+function resolveAutoKeyColumns(
+  tableName: string,
+  leftRows: RowData[],
+  rightRows: RowData[],
+): string[] {
   const leftKeys = detectTableKey(tableName, leftRows)
   const rightKeys = detectTableKey(tableName, rightRows)
 
@@ -47,10 +63,16 @@ function resolveAutoKeyColumns(tableName: string, leftRows: RowData[], rightRows
 }
 
 function areSameKeyColumns(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((column, index) => column === right[index])
+  return (
+    left.length === right.length &&
+    left.every((column, index) => column === right[index])
+  )
 }
 
-function buildWholeTableDiff(status: 'added' | 'removed', rows: RowData[]): TableDiff {
+function buildWholeTableDiff(
+  status: 'added' | 'removed',
+  rows: RowData[],
+): TableDiff {
   const tableRows: RowDiff[] = rows.map((row) => ({
     status,
     key: `row:${buildRowFingerprint(row)}`,
@@ -80,7 +102,9 @@ function buildKeyedTableDiff(
   const rightIndex = indexRows(rightRows, keyColumns)
   const orderedKeys = [
     ...rightRows.map((row) => serializeKey(row, keyColumns)),
-    ...leftRows.map((row) => serializeKey(row, keyColumns)).filter((key) => !rightIndex.has(key)),
+    ...leftRows
+      .map((row) => serializeKey(row, keyColumns))
+      .filter((key) => !rightIndex.has(key)),
   ]
 
   const rows: RowDiff[] = []
@@ -136,7 +160,11 @@ function buildKeyedTableDiff(
   }
 }
 
-function buildPositionalTableDiff(columns: string[], leftRows: RowData[], rightRows: RowData[]): TableDiff {
+function buildPositionalTableDiff(
+  columns: string[],
+  leftRows: RowData[],
+  rightRows: RowData[],
+): TableDiff {
   const rows: RowDiff[] = []
   const max = Math.max(leftRows.length, rightRows.length)
 
@@ -210,7 +238,10 @@ function collectColumns(leftRows: RowData[], rightRows: RowData[]): string[] {
   return columns
 }
 
-function indexRows(rows: RowData[], keyColumns: string[]): Map<string, RowData> {
+function indexRows(
+  rows: RowData[],
+  keyColumns: string[],
+): Map<string, RowData> {
   const index = new Map<string, RowData>()
 
   for (const row of rows) {
@@ -221,11 +252,15 @@ function indexRows(rows: RowData[], keyColumns: string[]): Map<string, RowData> 
 }
 
 function serializeKey(row: RowData, keyColumns: string[]): string {
-  return keyColumns.map((column) => `${column}=${JSON.stringify(row[column])}`).join('|')
+  return keyColumns
+    .map((column) => `${column}=${JSON.stringify(row[column])}`)
+    .join('|')
 }
 
 function deriveTableStatus(rows: RowDiff[]): TableDiff['status'] {
-  return rows.some((row) => row.status !== 'unchanged') ? 'modified' : 'unchanged'
+  return rows.some((row) => row.status !== 'unchanged')
+    ? 'modified'
+    : 'unchanged'
 }
 
 function summarize(rows: RowDiff[]): TableSummary {

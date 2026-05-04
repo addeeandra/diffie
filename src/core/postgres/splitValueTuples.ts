@@ -56,7 +56,9 @@ export function splitValueTuples(valuesSource: string): string[] {
 
     if (char === ')') {
       if (depth === 0) {
-        throw new Error('Unexpected closing parenthesis while parsing VALUES tuples.')
+        throw new Error(
+          'Unexpected closing parenthesis while parsing VALUES tuples.',
+        )
       }
 
       depth -= 1
@@ -69,7 +71,9 @@ export function splitValueTuples(valuesSource: string): string[] {
   }
 
   if (inSingleQuote || inDoubleQuote || depth !== 0) {
-    throw new Error('Unterminated VALUES tuple while parsing PostgreSQL INSERT statement.')
+    throw new Error(
+      'Unterminated VALUES tuple while parsing PostgreSQL INSERT statement.',
+    )
   }
 
   return tuples

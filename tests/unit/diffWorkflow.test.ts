@@ -25,6 +25,10 @@ describe('parser and diff workflow', () => {
       modified: 1,
       unchanged: 0,
     })
-    expect(diff.users.rows.map((row) => row.status)).toEqual(['modified', 'added', 'removed'])
+    expect(diff.users.rows.map((row) => row.status)).toEqual([
+      'modified',
+      'added',
+      'removed',
+    ])
   })
 })

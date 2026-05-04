@@ -35,4 +35,7 @@ export interface WorkerFailure {
   error: string
 }
 
-export type DiffWorkerResponse = ParseSnapshotSuccess | RunDiffSuccess | WorkerFailure
+export type DiffWorkerResponse =
+  | ParseSnapshotSuccess
+  | RunDiffSuccess
+  | WorkerFailure

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref } from 'vue'
 
-import type { RowDiff, TableDiff, TableStatus } from "./core/model/types";
+import type { RowDiff, TableDiff, TableStatus } from './core/model/types'
 
-import { useDiffSession } from "./composables/useDiffSession";
-import { usePrintView } from "./composables/usePrintView";
+import { useDiffSession } from './composables/useDiffSession'
+import { usePrintView } from './composables/usePrintView'
 
 const {
   activeView,
@@ -22,24 +22,24 @@ const {
   showDiff,
   showInput,
   stats,
-} = useDiffSession();
+} = useDiffSession()
 
-const printView = usePrintView();
+const printView = usePrintView()
 
-const filter = ref<"all" | TableStatus>("all");
-const search = ref("");
-const showUnchangedRows = ref(false);
-const statusOptions: Array<"all" | TableStatus> = [
-  "all",
-  "added",
-  "removed",
-  "modified",
-  "unchanged",
-];
-const showChangedColumnsOnly = ref(false);
-const showParsedPreview = ref(false);
-const leftDropActive = ref(false);
-const rightDropActive = ref(false);
+const filter = ref<'all' | TableStatus>('all')
+const search = ref('')
+const showUnchangedRows = ref(false)
+const statusOptions: Array<'all' | TableStatus> = [
+  'all',
+  'added',
+  'removed',
+  'modified',
+  'unchanged',
+]
+const showChangedColumnsOnly = ref(false)
+const showParsedPreview = ref(false)
+const leftDropActive = ref(false)
+const rightDropActive = ref(false)
 
 const tableStatusCounts = computed(() => {
   if (!diff.value) {
@@ -49,14 +49,14 @@ const tableStatusCounts = computed(() => {
       removed: 0,
       modified: 0,
       unchanged: 0,
-    };
+    }
   }
 
   return Object.values(diff.value).reduce(
     (counts, table) => {
-      counts.all += 1;
-      counts[table.status] += 1;
-      return counts;
+      counts.all += 1
+      counts[table.status] += 1
+      return counts
     },
     {
       all: 0,
@@ -65,51 +65,51 @@ const tableStatusCounts = computed(() => {
       modified: 0,
       unchanged: 0,
     },
-  );
-});
+  )
+})
 
 const visibleTables = computed(() => {
   if (!diff.value) {
-    return [];
+    return []
   }
 
   return Object.entries(diff.value).filter(([name, table]) => {
     const matchesFilter =
-      filter.value === "all" || table.status === filter.value;
+      filter.value === 'all' || table.status === filter.value
     const matchesSearch =
-      search.value.trim() === "" ||
-      name.toLowerCase().includes(search.value.trim().toLowerCase());
+      search.value.trim() === '' ||
+      name.toLowerCase().includes(search.value.trim().toLowerCase())
 
-    return matchesFilter && matchesSearch;
-  });
-});
+    return matchesFilter && matchesSearch
+  })
+})
 
 function visibleRows(table: TableDiff) {
   return showUnchangedRows.value
     ? table.rows
-    : table.rows.filter((row) => row.status !== "unchanged");
+    : table.rows.filter((row) => row.status !== 'unchanged')
 }
 
 function rowData(row: RowDiff) {
-  return row.dataB ?? row.dataA ?? {};
+  return row.dataB ?? row.dataA ?? {}
 }
 
 function visibleColumns(table: TableDiff) {
   if (!showChangedColumnsOnly.value) {
-    return table.columns;
+    return table.columns
   }
 
-  const changed = new Set(table.keyColumns);
+  const changed = new Set(table.keyColumns)
 
   for (const row of table.rows) {
     for (const column of Object.keys(row.changes)) {
-      changed.add(column);
+      changed.add(column)
     }
 
-    if (row.status === "added" || row.status === "removed") {
+    if (row.status === 'added' || row.status === 'removed') {
       for (const [column, value] of Object.entries(rowData(row))) {
         if (value !== null && value !== undefined) {
-          changed.add(column);
+          changed.add(column)
         }
       }
     }
@@ -117,68 +117,68 @@ function visibleColumns(table: TableDiff) {
 
   return table.columns.filter(
     (column) => changed.has(column) || table.keyColumns.includes(column),
-  );
+  )
 }
 
 async function loadSqlFile(
-  side: "left" | "right",
+  side: 'left' | 'right',
   file: File | null | undefined,
 ) {
   if (!file) {
-    return;
+    return
   }
 
-  const text = await file.text();
+  const text = await file.text()
 
-  if (side === "left") {
-    leftSql.value = text;
-    return;
+  if (side === 'left') {
+    leftSql.value = text
+    return
   }
 
-  rightSql.value = text;
+  rightSql.value = text
 }
 
-async function handleFileInput(side: "left" | "right", event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  await loadSqlFile(side, file);
-  input.value = "";
+async function handleFileInput(side: 'left' | 'right', event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  await loadSqlFile(side, file)
+  input.value = ''
 }
 
-async function handleDrop(side: "left" | "right", event: DragEvent) {
-  event.preventDefault();
-  setDropActive(side, false);
-  await loadSqlFile(side, event.dataTransfer?.files?.[0]);
+async function handleDrop(side: 'left' | 'right', event: DragEvent) {
+  event.preventDefault()
+  setDropActive(side, false)
+  await loadSqlFile(side, event.dataTransfer?.files?.[0])
 }
 
-function handleDragOver(side: "left" | "right", event: DragEvent) {
-  event.preventDefault();
-  setDropActive(side, true);
+function handleDragOver(side: 'left' | 'right', event: DragEvent) {
+  event.preventDefault()
+  setDropActive(side, true)
 }
 
-function handleDragLeave(side: "left" | "right") {
-  setDropActive(side, false);
+function handleDragLeave(side: 'left' | 'right') {
+  setDropActive(side, false)
 }
 
-function setDropActive(side: "left" | "right", value: boolean) {
-  if (side === "left") {
-    leftDropActive.value = value;
-    return;
+function setDropActive(side: 'left' | 'right', value: boolean) {
+  if (side === 'left') {
+    leftDropActive.value = value
+    return
   }
 
-  rightDropActive.value = value;
+  rightDropActive.value = value
 }
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) {
-    return "null";
+    return 'null'
   }
 
-  if (typeof value === "string") {
-    return value;
+  if (typeof value === 'string') {
+    return value
   }
 
-  return JSON.stringify(value);
+  return JSON.stringify(value)
 }
 </script>
 
@@ -219,19 +219,19 @@ function formatValue(value: unknown): string {
           <span v-if="isDirty">Inputs changed since the last diff.</span>
         </p>
 
-        <div class="toolbar-actions" v-if="activeView === 'input'">
+        <div v-if="activeView === 'input'" class="toolbar-actions">
           <button
             class="button"
             type="button"
-            @click="runDiff"
             :disabled="busy"
+            @click="runDiff"
           >
-            {{ busy ? "Working…" : hasDiff ? "Update diff" : "Run diff" }}
+            {{ busy ? 'Working…' : hasDiff ? 'Update diff' : 'Run diff' }}
             &rarr;
           </button>
         </div>
 
-        <div class="toolbar-actions" v-else>
+        <div v-else class="toolbar-actions">
           <button
             class="button button-secondary"
             type="button"
@@ -242,10 +242,10 @@ function formatValue(value: unknown): string {
           <button
             class="button"
             type="button"
-            @click="runDiff"
             :disabled="busy"
+            @click="runDiff"
           >
-            {{ busy ? "Working…" : isDirty ? "Update diff" : "Re-run diff" }}
+            {{ busy ? 'Working…' : isDirty ? 'Update diff' : 'Re-run diff' }}
           </button>
           <button
             class="button button-secondary"
@@ -325,7 +325,10 @@ function formatValue(value: unknown): string {
         <div class="panel-header slim preview-header">
           <div>
             <h2>Parsed preview</h2>
-            <p>Parse the current SQL inputs into the normalized snapshot structure.</p>
+            <p>
+              Parse the current SQL inputs into the normalized snapshot
+              structure.
+            </p>
           </div>
 
           <div class="panel-header-actions">
@@ -334,20 +337,23 @@ function formatValue(value: unknown): string {
               type="button"
               @click="showParsedPreview = !showParsedPreview"
             >
-              {{ showParsedPreview ? "Hide preview" : "Show preview" }}
+              {{ showParsedPreview ? 'Hide preview' : 'Show preview' }}
             </button>
             <button
               class="button button-secondary"
               type="button"
-              @click="previewSnapshots"
               :disabled="busy"
+              @click="previewSnapshots"
             >
               Parse now
             </button>
           </div>
         </div>
 
-        <div v-if="showParsedPreview && leftPreview && rightPreview" class="preview-grid compact-grid">
+        <div
+          v-if="showParsedPreview && leftPreview && rightPreview"
+          class="preview-grid compact-grid"
+        >
           <article>
             <div class="panel-header slim compact">
               <h2>Snapshot A</h2>
@@ -363,7 +369,10 @@ function formatValue(value: unknown): string {
         </div>
 
         <div v-else-if="showParsedPreview" class="preview-empty">
-          <p>No parsed preview yet. Click <code>Parse now</code> to inspect the current inputs.</p>
+          <p>
+            No parsed preview yet. Click <code>Parse now</code> to inspect the
+            current inputs.
+          </p>
         </div>
       </section>
     </section>
@@ -461,8 +470,8 @@ function formatValue(value: unknown): string {
             }}</span>
             <span class="meta-pill">{{
               table.keyColumns.length
-                ? `key: ${table.keyColumns.join(", ")}`
-                : "key: positional"
+                ? `key: ${table.keyColumns.join(', ')}`
+                : 'key: positional'
             }}</span>
           </div>
 
@@ -475,7 +484,7 @@ function formatValue(value: unknown): string {
         </summary>
 
         <p v-if="table.warnings.length" class="warning-banner">
-          {{ table.warnings.join(" ") }}
+          {{ table.warnings.join(' ') }}
         </p>
 
         <div class="table-scroll">

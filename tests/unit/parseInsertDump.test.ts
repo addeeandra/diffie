@@ -21,12 +21,10 @@ describe('parseSqlValue', () => {
 describe('splitValueTuples', () => {
   it('splits VALUES tuples without breaking on commas inside strings', () => {
     expect(
-      splitValueTuples(`(1, 'Alice'), (2, 'comma, inside'), (3, 'semi; colon')`),
-    ).toEqual([
-      `1, 'Alice'`,
-      `2, 'comma, inside'`,
-      `3, 'semi; colon'`,
-    ])
+      splitValueTuples(
+        `(1, 'Alice'), (2, 'comma, inside'), (3, 'semi; colon')`,
+      ),
+    ).toEqual([`1, 'Alice'`, `2, 'comma, inside'`, `3, 'semi; colon'`])
   })
 })
 

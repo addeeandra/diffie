@@ -148,7 +148,9 @@ function parseInsertStatement(statement: string): ParsedInsertStatement {
     throw new Error('INSERT statement is missing a column list.')
   }
 
-  const tableName = normalizeIdentifierPath(statement.slice(tableStart, cursor).trim())
+  const tableName = normalizeIdentifierPath(
+    statement.slice(tableStart, cursor).trim(),
+  )
   const columnsResult = readParenthesized(statement, cursor)
   const columns = splitIdentifierList(columnsResult.content)
   cursor = skipWhitespace(statement, columnsResult.endIndex)
@@ -156,7 +158,9 @@ function parseInsertStatement(statement: string): ParsedInsertStatement {
   const valuesMatch = statement.slice(cursor).match(VALUES_RE)
 
   if (!valuesMatch) {
-    throw new Error(`Unsupported INSERT form for table ${tableName}. Expected VALUES.`)
+    throw new Error(
+      `Unsupported INSERT form for table ${tableName}. Expected VALUES.`,
+    )
   }
 
   cursor += valuesMatch[0].length
@@ -172,7 +176,9 @@ function parseInsertStatement(statement: string): ParsedInsertStatement {
       )
     }
 
-    return Object.fromEntries(columns.map((column, index) => [column, values[index]]))
+    return Object.fromEntries(
+      columns.map((column, index) => [column, values[index]]),
+    )
   })
 
   return { tableName, columns, rows }
@@ -369,7 +375,10 @@ function normalizeIdentifier(source: string): string {
   return trimmed
 }
 
-function readParenthesized(source: string, openIndex: number): { content: string; endIndex: number } {
+function readParenthesized(
+  source: string,
+  openIndex: number,
+): { content: string; endIndex: number } {
   let depth = 0
   let inDoubleQuote = false
 

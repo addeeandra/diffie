@@ -29,6 +29,11 @@ pnpm dev
 pnpm test
 pnpm build
 pnpm typecheck
+pnpm lint
+pnpm lint:fix
+pnpm format
+pnpm format:check
+pnpm verify
 ```
 
 ## Project structure
@@ -153,6 +158,8 @@ If a parser or diff bug is found:
 - avoid premature abstractions
 - prefer readable function names over clever compact code
 - preserve prototype intent, but not prototype coupling
+- use ESLint for code-quality checks
+- use Prettier for formatting consistency
 
 ## Out of scope for now
 
@@ -174,3 +181,19 @@ Keep these docs updated as the project evolves:
 - `ROADMAP.md` for priorities and milestones
 
 When architecture changes, update docs in the same change set if possible.
+
+## CI
+
+GitHub Actions runs the same verification pipeline used locally:
+
+```bash
+pnpm verify
+```
+
+Current CI checks:
+
+- lint
+- prettier format check
+- tests
+- typecheck
+- production build

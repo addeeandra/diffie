@@ -33,12 +33,7 @@ describe('detectTableKey', () => {
   })
 
   it('returns no key when candidates are not reliable', () => {
-    expect(
-      detectTableKey('users', [
-        { id: 1 },
-        { id: 1 },
-      ]),
-    ).toEqual([])
+    expect(detectTableKey('users', [{ id: 1 }, { id: 1 }])).toEqual([])
   })
 })
 
@@ -126,7 +121,9 @@ describe('diffSnapshots', () => {
 
     expect(diff.audit_logs.matchingStrategy).toBe('position')
     expect(diff.audit_logs.keyColumns).toEqual([])
-    expect(diff.audit_logs.warnings[0]).toMatch(/Rows were compared by position/)
+    expect(diff.audit_logs.warnings[0]).toMatch(
+      /Rows were compared by position/,
+    )
     expect(diff.audit_logs.rows[0]).toEqual({
       status: 'modified',
       key: 'index:0',

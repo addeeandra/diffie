@@ -5,6 +5,7 @@
 Diffie is a **browser-first, local-first PostgreSQL snapshot diff tool**.
 
 Its job is narrow:
+
 - accept two PostgreSQL snapshots
 - parse row data from `INSERT INTO ... VALUES`
 - diff tables, rows, and cells
@@ -16,6 +17,7 @@ If future work makes Diffie broader but less trustworthy, clarity and correctnes
 ## Product boundaries
 
 ### In scope
+
 - PostgreSQL snapshots only
 - browser runtime first
 - local processing only
@@ -26,6 +28,7 @@ If future work makes Diffie broader but less trustworthy, clarity and correctnes
 - print-friendly output
 
 ### Out of scope for V1
+
 - MySQL
 - JSON input
 - Laravel/backend work
@@ -55,6 +58,7 @@ If future work makes Diffie broader but less trustworthy, clarity and correctnes
 ## Matching principles
 
 Current matching priority:
+
 1. detected stable key such as `id`
 2. detected stable key such as `uuid`
 3. table-specific singular key such as `order_id`
@@ -65,6 +69,7 @@ Positional fallback is acceptable only when no stable key is available, and the 
 ## Current app direction
 
 The current implementation already has:
+
 - PostgreSQL `INSERT` parsing
 - diff engine core
 - worker-based parse/diff execution
@@ -76,6 +81,7 @@ The current implementation already has:
 ## Working rule for future sessions
 
 When making changes, preserve these priorities:
+
 1. correctness over breadth
 2. simplicity over abstraction
 3. tool clarity over decorative UI
