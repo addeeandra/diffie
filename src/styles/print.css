@@ -1,0 +1,41 @@
+@media print {
+  :root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --panel-2: #ffffff;
+    --border: #d0d7e2;
+    --text: #111827;
+    --muted: #475569;
+    --accent: #1d4ed8;
+    --accent-soft: rgba(29, 78, 216, 0.08);
+    --shadow: none;
+  }
+
+  body {
+    background: #ffffff;
+    color: var(--text);
+  }
+
+  .app-shell {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .hero {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    background: transparent;
+  }
+
+  .status-grid {
+    break-inside: avoid;
+  }
+
+  .status-grid article {
+    break-inside: avoid;
+  }
+}
