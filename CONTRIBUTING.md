@@ -1,6 +1,6 @@
 # Contributing
 
-This project is still early. The main goal right now is to build a clean foundation before expanding features.
+Use `README.md` as the project constitution. This file is the practical companion for setup, structure, workflow, and testing.
 
 ## Principles
 

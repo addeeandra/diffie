@@ -8,13 +8,13 @@
     --text: #111827;
     --muted: #475569;
     --accent: #1d4ed8;
-    --accent-soft: rgba(29, 78, 216, 0.08);
     --shadow: none;
   }
 
   body {
     background: #ffffff;
     color: var(--text);
+    font-size: 11px;
   }
 
   .app-shell {
@@ -23,19 +23,61 @@
     padding: 0;
   }
 
-  .hero {
-    border: none;
-    border-radius: 0;
+  .print-hidden {
+    display: none !important;
+  }
+
+  .print-block-avoid,
+  .metric-inline,
+  .table-panel,
+  .table-panel table,
+  .table-panel tr {
+    break-inside: avoid;
+  }
+
+  .app-header,
+  .panel,
+  .metric-inline {
     box-shadow: none;
-    padding: 0;
+  }
+
+  .app-header {
+    position: static;
+    background: transparent;
+    padding: 0 0 8px;
+    margin-bottom: 8px;
+  }
+
+  .panel,
+  .metric-inline {
+    border-radius: 0;
     background: transparent;
   }
 
-  .status-grid {
-    break-inside: avoid;
+  .summary-strip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin-bottom: 8px;
   }
 
-  .status-grid article {
-    break-inside: avoid;
+  .table-panel {
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+
+  .table-summary-row {
+    cursor: default;
+  }
+
+  .table-scroll {
+    overflow: visible;
+  }
+
+  textarea,
+  input,
+  select,
+  .button,
+  .upload-button,
+  .view-switch {
+    display: none !important;
   }
 }

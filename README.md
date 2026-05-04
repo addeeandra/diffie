@@ -1,111 +1,89 @@
 # Diffie
 
-Diffie is a browser-first visual diff tool for PostgreSQL data snapshots.
+## Constitution
 
-The goal of the project is simple: compare two local PostgreSQL snapshots, identify table / row / field-level changes, and present the result in a clean interface that also prints well from the browser.
+Diffie is a **browser-first, local-first PostgreSQL snapshot diff tool**.
 
-## Scope for the current rebuild
+Its job is narrow:
+- accept two PostgreSQL snapshots
+- parse row data from `INSERT INTO ... VALUES`
+- diff tables, rows, and cells
+- present the result clearly on screen
+- print cleanly from the browser
 
-This repository was re-initialized from a single-file prototype and is now being rebuilt as a Vue 3 + Vite + TypeScript application.
+If future work makes Diffie broader but less trustworthy, clarity and correctness win.
 
-Current product direction:
+## Product boundaries
 
-- PostgreSQL-only
-- local-first, browser-first
-- optimized for `INSERT INTO ... VALUES` dumps
-- small snapshots first, typically under 5 MB
-- no backend
-- no JSON input
-- no export pipeline in V1
-- print-friendly diff output via browser print styles
+### In scope
+- PostgreSQL snapshots only
+- browser runtime first
+- local processing only
+- `INSERT INTO ... VALUES` is the primary supported input
+- small snapshot files first, typically under 5 MB
+- table / row / cell diffing
+- automatic key detection with positional fallback
+- print-friendly output
 
-Prototype reference kept in-repo:
+### Out of scope for V1
+- MySQL
+- JSON input
+- Laravel/backend work
+- live database connections
+- server-side processing
+- broad “all SQL dialects” ambitions
 
-- `prototype/db-diff-visualizer.jsx`
+## UX principles
 
-## Why this exists
+- feel like a **tool**, not a marketing app
+- compact, efficient, and low-friction
+- calm dark theme with terminal sensibility
+- visual style closer to `slowlife-app` than heavy/brutalist chrome
+- filters and actions should be directly visible
+- parsing/diff actions must be predictable and non-confusing
+- print mode is a first-class view, not an afterthought
 
-Diffie is meant to make database snapshot review easier during debugging, QA, test verification, and local investigation. Raw SQL dumps are hard to inspect visually; Diffie aims to turn them into a structured, reviewable diff.
+## Technical principles
 
-## Planned V1 capabilities
+- keep parser and diff logic pure and testable
+- prefer explicit failures over silent incorrect parsing
+- keep UI thin around the core logic
+- use Web Workers for parse/diff work in the browser
+- broaden supported SQL only with tests and clear intent
+- every parsing bug should add a regression test or fixture
 
-- ingest two PostgreSQL SQL snapshots from paste, drag-and-drop, or file upload
-- parse `INSERT INTO ... VALUES` statements reliably
-- normalize table data into an internal snapshot model
-- match rows by detected key columns (`id`, `uuid`, or user override later)
-- show added / removed / modified / unchanged rows
-- highlight changed cells per row
-- support browser print output with dedicated print styles
+## Matching principles
 
-## Tech stack
+Current matching priority:
+1. detected stable key such as `id`
+2. detected stable key such as `uuid`
+3. table-specific singular key such as `order_id`
+4. positional fallback with warning
 
-- Vue 3
-- Vite
-- TypeScript
-- Vitest
-- Browser Web Worker for parsing / diffing
-- pnpm for package management
+Positional fallback is acceptable only when no stable key is available, and the UI should make that obvious.
 
-## Getting started
+## Current app direction
 
-### Prerequisites
+The current implementation already has:
+- PostgreSQL `INSERT` parsing
+- diff engine core
+- worker-based parse/diff execution
+- paste, upload, and drag-drop input
+- parsed preview
+- diff summary and per-table drilldown
+- print stylesheet
 
-This project uses `asdf` for runtime and package-manager management.
+## Working rule for future sessions
 
-```bash
-asdf install
-```
+When making changes, preserve these priorities:
+1. correctness over breadth
+2. simplicity over abstraction
+3. tool clarity over decorative UI
+4. local privacy over convenience features
+5. maintainable scope over speculative expansion
 
-The repository includes a local `.tool-versions` file for:
+## Docs map
 
-- Node.js
-- pnpm
-
-### Install dependencies
-
-```bash
-pnpm install
-```
-
-### Start development server
-
-```bash
-pnpm dev
-```
-
-### Run tests
-
-```bash
-pnpm test
-```
-
-### Build for production
-
-```bash
-pnpm build
-```
-
-## Current status
-
-The project is currently at scaffold stage:
-
-- initial Vite Vue TypeScript app is in place
-- base directory structure is created
-- placeholder parser / diff modules are present
-- test runner is wired up
-- print stylesheet foundation is present
-- detailed implementation is still ahead
-
-## Documentation
-
-- `README.md` — project overview
-- `CONTRIBUTING.md` — development workflow, structure, and contribution notes
-- `ROADMAP.md` — planned milestones and priorities
-
-## Near-term priorities
-
-1. implement a robust PostgreSQL `INSERT` parser
-2. define diff engine behavior around key detection and row comparison
-3. replace the scaffold screen with the first import / diff workflow
-4. add regression fixtures for parser edge cases
-5. refine print-media output
+- `README.md` — this constitution and product guardrails
+- `CONTRIBUTING.md` — setup, structure, workflow, and testing notes
+- `ROADMAP.md` — implementation status and next steps

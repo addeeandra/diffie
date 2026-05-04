@@ -1,6 +1,6 @@
 # Roadmap
 
-This roadmap is intentionally narrow. Diffie should become good at one thing before it grows wider.
+This roadmap follows the constraints in `README.md`. Diffie should become good at one thing before it grows wider.
 
 ## Product direction
 
@@ -13,7 +13,7 @@ Build a browser-first PostgreSQL snapshot diff viewer that:
 
 ## Phase 0 — scaffold and boundaries
 
-Status: in progress
+Status: complete
 
 - [x] re-initialize the repository with Vue 3 + Vite + TypeScript
 - [x] keep the original prototype in `prototype/`
@@ -24,57 +24,57 @@ Status: in progress
 
 ## Phase 1 — PostgreSQL parser foundation
 
-Status: next
+Status: in progress
 
-- [ ] implement statement extraction for PostgreSQL `INSERT INTO ... VALUES`
-- [ ] implement tuple splitting robustly
-- [ ] implement scalar value parsing
-- [ ] merge repeated inserts into a normalized snapshot shape
-- [ ] handle quoted identifiers and common whitespace variation
+- [x] implement statement extraction for PostgreSQL `INSERT INTO ... VALUES`
+- [x] implement tuple splitting robustly
+- [x] implement scalar value parsing
+- [x] merge repeated inserts into a normalized snapshot shape
+- [x] handle quoted identifiers and common whitespace variation
 - [ ] reject or surface unsupported syntax clearly
-- [ ] add parser regression fixtures
+- [x] add parser regression fixtures
 
 ## Phase 2 — diff engine
 
-Status: planned
+Status: in progress
 
-- [ ] implement table-level diffing
-- [ ] implement row-level diffing
-- [ ] implement cell-level change reporting
-- [ ] detect row keys with priority for `id` and `uuid`
-- [ ] support positional fallback when no stable key is available
-- [ ] surface warnings when fallback matching is used
+- [x] implement table-level diffing
+- [x] implement row-level diffing
+- [x] implement cell-level change reporting
+- [x] detect row keys with priority for `id` and `uuid`
+- [x] support positional fallback when no stable key is available
+- [x] surface warnings when fallback matching is used
 
 ## Phase 3 — first usable UI
 
-Status: planned
+Status: in progress
 
-- [ ] replace scaffold landing screen with import workflow
-- [ ] add Snapshot A / Snapshot B paste areas
-- [ ] add file upload and drag-and-drop
-- [ ] run parse + diff in a Web Worker
-- [ ] show parser errors and warnings clearly
-- [ ] render a first pass of summary cards and table diff sections
+- [x] replace scaffold landing screen with import workflow
+- [x] add Snapshot A / Snapshot B paste areas
+- [x] add file upload and drag-and-drop
+- [x] run parse + diff in a Web Worker
+- [x] show parser errors and warnings clearly
+- [x] render a first pass of summary cards and table diff sections
 
 ## Phase 4 — usability polish
 
-Status: planned
+Status: in progress
 
-- [ ] add table search
-- [ ] add status filters
-- [ ] add show / hide unchanged rows
-- [ ] add show changed columns only
-- [ ] show which key strategy was used per table
-- [ ] prepare print-focused UI states
+- [x] add table search
+- [x] add status filters
+- [x] add show / hide unchanged rows
+- [x] add show changed columns only
+- [x] show which key strategy was used per table
+- [x] prepare print-focused UI states
 
 ## Phase 5 — print-media quality
 
-Status: planned
+Status: in progress
 
-- [ ] define print layout behavior for long diffs
-- [ ] hide interactive controls in print mode
+- [x] define print layout behavior for long diffs
+- [x] hide interactive controls in print mode
 - [ ] ensure changed sections print with strong visual hierarchy
-- [ ] keep printing useful when saving as PDF
+- [x] keep printing useful when saving as PDF
 - [ ] verify page-break behavior on large tables
 
 ## Phase 6 — later evaluation
