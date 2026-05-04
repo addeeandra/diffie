@@ -1,5 +1,7 @@
 # Diffie
 
+[![CI](https://github.com/addeeandra/diffie/actions/workflows/ci.yml/badge.svg)](https://github.com/addeeandra/diffie/actions/workflows/ci.yml)
+
 ## Constitution
 
 Diffie is a **browser-first, local-first PostgreSQL snapshot diff tool**.
@@ -77,6 +79,18 @@ The current implementation already has:
 - parsed preview
 - diff summary and per-table drilldown
 - print stylesheet
+
+## Quality checks
+
+Local commands:
+
+- `pnpm test`
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm build`
+- `pnpm verify`
+
+CI runs `pnpm verify`. The badge above should reflect current workflow status.
 
 ## Working rule for future sessions
 

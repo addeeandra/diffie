@@ -13,6 +13,14 @@ export default [
   ...pluginVue.configs['flat/recommended'],
   ...tseslint.configs.recommended,
   {
+    files: ['**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
     files: ['**/*.{ts,tsx,vue}'],
     languageOptions: {
       parser: vueParser,
