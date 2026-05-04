@@ -4,6 +4,7 @@ import type {
   RowDiff,
   Snapshot,
   TableDiff,
+  TableShapeSummary,
   TableSummary,
 } from '../model/types'
 
@@ -19,21 +20,23 @@ export function diffSnapshots(left: Snapshot, right: Snapshot): DiffResult {
     const rightRows = right[tableName] ?? []
 
     if (!(tableName in left)) {
-      diff[tableName] = buildWholeTableDiff('added', rightRows)
+      diff[tableName] = buildWholeTableDiff('added', [], rightRows)
       continue
     }
 
     if (!(tableName in right)) {
-      diff[tableName] = buildWholeTableDiff('removed', leftRows)
+      diff[tableName] = buildWholeTableDiff('removed', leftRows, [])
       continue
     }
 
     const columns = collectColumns(leftRows, rightRows)
+    const shape = buildShapeSummary(leftRows, rightRows)
     const autoKeyColumns = resolveAutoKeyColumns(tableName, leftRows, rightRows)
 
     if (autoKeyColumns.length > 0) {
       diff[tableName] = buildKeyedTableDiff(
         columns,
+        shape,
         leftRows,
         rightRows,
         autoKeyColumns,
@@ -41,7 +44,12 @@ export function diffSnapshots(left: Snapshot, right: Snapshot): DiffResult {
       continue
     }
 
-    diff[tableName] = buildPositionalTableDiff(columns, leftRows, rightRows)
+    diff[tableName] = buildPositionalTableDiff(
+      columns,
+      shape,
+      leftRows,
+      rightRows,
+    )
   }
 
   return diff
@@ -71,8 +79,10 @@ function areSameKeyColumns(left: string[], right: string[]): boolean {
 
 function buildWholeTableDiff(
   status: 'added' | 'removed',
-  rows: RowData[],
+  leftRows: RowData[],
+  rightRows: RowData[],
 ): TableDiff {
+  const rows = status === 'added' ? rightRows : leftRows
   const tableRows: RowDiff[] = rows.map((row) => ({
     status,
     key: `row:${buildRowFingerprint(row)}`,
@@ -83,7 +93,8 @@ function buildWholeTableDiff(
 
   return {
     status,
-    columns: collectColumns(rows, []),
+    columns: collectColumns(leftRows, rightRows),
+    shape: buildShapeSummary(leftRows, rightRows),
     rows: tableRows,
     summary: summarize(tableRows),
     keyColumns: [],
@@ -94,6 +105,7 @@ function buildWholeTableDiff(
 
 function buildKeyedTableDiff(
   columns: string[],
+  shape: TableShapeSummary,
   leftRows: RowData[],
   rightRows: RowData[],
   keyColumns: string[],
@@ -152,6 +164,7 @@ function buildKeyedTableDiff(
   return {
     status: deriveTableStatus(rows),
     columns,
+    shape,
     rows,
     summary: summarize(rows),
     keyColumns,
@@ -162,6 +175,7 @@ function buildKeyedTableDiff(
 
 function buildPositionalTableDiff(
   columns: string[],
+  shape: TableShapeSummary,
   leftRows: RowData[],
   rightRows: RowData[],
 ): TableDiff {
@@ -212,6 +226,7 @@ function buildPositionalTableDiff(
   return {
     status: deriveTableStatus(rows),
     columns,
+    shape,
     rows,
     summary: summarize(rows),
     keyColumns: [],
@@ -219,6 +234,23 @@ function buildPositionalTableDiff(
     warnings: [
       'No stable key detected. Rows were compared by position and may produce misleading diffs if order changed.',
     ],
+  }
+}
+
+function buildShapeSummary(
+  leftRows: RowData[],
+  rightRows: RowData[],
+): TableShapeSummary {
+  const leftColumns = collectColumns(leftRows, [])
+  const rightColumns = collectColumns([], rightRows)
+  const leftSet = new Set(leftColumns)
+  const rightSet = new Set(rightColumns)
+
+  return {
+    leftColumns,
+    rightColumns,
+    addedColumns: rightColumns.filter((column) => !leftSet.has(column)),
+    removedColumns: leftColumns.filter((column) => !rightSet.has(column)),
   }
 }
 

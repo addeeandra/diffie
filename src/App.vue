@@ -42,6 +42,8 @@ const leftDropActive = ref(false)
 const rightDropActive = ref(false)
 const openColumnMenu = ref<string | null>(null)
 const hiddenColumnsByTable = ref<Record<string, string[]>>({})
+const diffViewMode = ref<'overview' | 'details'>('overview')
+const focusedTableName = ref<string | null>(null)
 
 const tableStatusCounts = computed(() => {
   if (!diff.value) {
@@ -84,6 +86,16 @@ const visibleTables = computed(() => {
 
     return matchesFilter && matchesSearch
   })
+})
+
+const detailTables = computed(() => {
+  if (!focusedTableName.value) {
+    return visibleTables.value
+  }
+
+  return visibleTables.value.filter(
+    ([tableName]) => tableName === focusedTableName.value,
+  )
 })
 
 function visibleRows(table: TableDiff) {
@@ -204,6 +216,42 @@ function setDropActive(side: 'left' | 'right', value: boolean) {
   }
 
   rightDropActive.value = value
+}
+
+function showOverview() {
+  diffViewMode.value = 'overview'
+  focusedTableName.value = null
+}
+
+function showDetails(tableName?: string) {
+  diffViewMode.value = 'details'
+
+  if (tableName) {
+    focusedTableName.value = tableName
+  }
+}
+
+function clearFocusedTable() {
+  focusedTableName.value = null
+}
+
+function totalRows(table: TableDiff) {
+  return (
+    table.summary.added +
+    table.summary.removed +
+    table.summary.modified +
+    table.summary.unchanged
+  )
+}
+
+function rowBarWidth(count: number, table: TableDiff) {
+  const total = totalRows(table)
+
+  if (total === 0 || count === 0) {
+    return '0%'
+  }
+
+  return `${(count / total) * 100}%`
 }
 
 function formatValue(value: unknown): string {
@@ -441,6 +489,33 @@ function formatValue(value: unknown): string {
 
       <section class="panel panel-tight controls print-hidden">
         <div class="control-group compact-controls">
+          <div>
+            <span>Diff view</span>
+            <div
+              class="filter-pills"
+              role="tablist"
+              aria-label="Diff view mode"
+            >
+              <button
+                class="filter-pill"
+                :data-active="diffViewMode === 'overview'"
+                type="button"
+                @click="showOverview"
+              >
+                overview
+              </button>
+              <button
+                class="filter-pill"
+                :data-active="diffViewMode === 'details'"
+                type="button"
+                @click="showDetails()"
+              >
+                details
+                <span>{{ focusedTableName ? 'focused' : 'all' }}</span>
+              </button>
+            </div>
+          </div>
+
           <label>
             <span>Search</span>
             <input
@@ -475,14 +550,29 @@ function formatValue(value: unknown): string {
         </div>
 
         <div class="control-actions compact-actions">
-          <label class="checkbox-label">
-            <input v-model="showUnchangedRows" type="checkbox" />
-            Show unchanged rows
-          </label>
-          <label class="checkbox-label">
-            <input v-model="showChangedColumnsOnly" type="checkbox" />
-            Show changed columns only
-          </label>
+          <template v-if="diffViewMode === 'details'">
+            <button
+              v-if="focusedTableName"
+              class="button button-secondary"
+              type="button"
+              @click="clearFocusedTable"
+            >
+              show all tables
+            </button>
+            <label class="checkbox-label">
+              <input v-model="showUnchangedRows" type="checkbox" />
+              Show unchanged rows
+            </label>
+            <label class="checkbox-label">
+              <input v-model="showChangedColumnsOnly" type="checkbox" />
+              Show changed columns only
+            </label>
+          </template>
+          <template v-else>
+            <div class="filter-help overview-hint">
+              Click any table tile to jump into detailed row-level diff.
+            </div>
+          </template>
         </div>
       </section>
 
@@ -493,8 +583,108 @@ function formatValue(value: unknown): string {
         <h2>No tables match the current filter.</h2>
       </section>
 
+      <section
+        v-else-if="diffViewMode === 'overview'"
+        class="overview-grid print-block-avoid"
+      >
+        <button
+          v-for="[tableName, table] in visibleTables"
+          :key="tableName"
+          class="panel overview-tile"
+          :data-status="table.status"
+          type="button"
+          @click="showDetails(tableName)"
+        >
+          <div class="overview-tile-head">
+            <div>
+              <h2>{{ tableName }}</h2>
+              <div class="overview-meta-row">
+                <span class="status-pill" :data-status="table.status">{{
+                  table.status
+                }}</span>
+                <span class="meta-pill">{{
+                  table.keyColumns.length
+                    ? `key: ${table.keyColumns.join(', ')}`
+                    : 'key: positional'
+                }}</span>
+              </div>
+            </div>
+            <span class="overview-open">open →</span>
+          </div>
+
+          <div class="overview-stats-grid">
+            <div>
+              <span>rows</span>
+              <strong>{{ totalRows(table) }}</strong>
+            </div>
+            <div>
+              <span>shape</span>
+              <strong>
+                +{{ table.shape.addedColumns.length }} / -{{
+                  table.shape.removedColumns.length
+                }}
+              </strong>
+            </div>
+          </div>
+
+          <div class="overview-bar" aria-hidden="true">
+            <span
+              class="bar-segment added"
+              :style="{ width: rowBarWidth(table.summary.added, table) }"
+            ></span>
+            <span
+              class="bar-segment removed"
+              :style="{ width: rowBarWidth(table.summary.removed, table) }"
+            ></span>
+            <span
+              class="bar-segment modified"
+              :style="{ width: rowBarWidth(table.summary.modified, table) }"
+            ></span>
+            <span
+              class="bar-segment unchanged"
+              :style="{ width: rowBarWidth(table.summary.unchanged, table) }"
+            ></span>
+          </div>
+
+          <div class="overview-summary-line">
+            <span>+{{ table.summary.added }}</span>
+            <span>-{{ table.summary.removed }}</span>
+            <span>~{{ table.summary.modified }}</span>
+            <span>={{ table.summary.unchanged }}</span>
+          </div>
+
+          <div
+            v-if="
+              table.shape.addedColumns.length ||
+              table.shape.removedColumns.length
+            "
+            class="overview-shape-list"
+          >
+            <span
+              v-for="column in table.shape.addedColumns"
+              :key="`${tableName}-add-${column}`"
+              class="shape-pill added"
+            >
+              + {{ column }}
+            </span>
+            <span
+              v-for="column in table.shape.removedColumns"
+              :key="`${tableName}-remove-${column}`"
+              class="shape-pill removed"
+            >
+              - {{ column }}
+            </span>
+          </div>
+
+          <p v-if="table.warnings.length" class="overview-warning">
+            {{ table.warnings[0] }}
+          </p>
+        </button>
+      </section>
+
       <details
-        v-for="[tableName, table] in visibleTables"
+        v-for="[tableName, table] in detailTables"
+        v-else
         :key="tableName"
         class="panel panel-tight table-panel print-block-avoid"
         :open="table.status !== 'unchanged'"

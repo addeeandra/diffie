@@ -73,6 +73,12 @@ describe('diffSnapshots', () => {
     expect(diff.users.status).toBe('modified')
     expect(diff.users.matchingStrategy).toBe('auto')
     expect(diff.users.keyColumns).toEqual(['id'])
+    expect(diff.users.shape).toEqual({
+      leftColumns: ['id', 'name', 'role'],
+      rightColumns: ['id', 'name', 'role'],
+      addedColumns: [],
+      removedColumns: [],
+    })
     expect(diff.users.summary).toEqual({
       added: 1,
       removed: 1,
@@ -149,6 +155,12 @@ describe('diffSnapshots', () => {
     )
 
     expect(diff.added_table.status).toBe('added')
+    expect(diff.added_table.shape).toEqual({
+      leftColumns: [],
+      rightColumns: ['id', 'value'],
+      addedColumns: ['id', 'value'],
+      removedColumns: [],
+    })
     expect(diff.added_table.summary).toEqual({
       added: 1,
       removed: 0,
@@ -156,6 +168,12 @@ describe('diffSnapshots', () => {
       unchanged: 0,
     })
     expect(diff.removed_table.status).toBe('removed')
+    expect(diff.removed_table.shape).toEqual({
+      leftColumns: ['id', 'value'],
+      rightColumns: [],
+      addedColumns: [],
+      removedColumns: ['id', 'value'],
+    })
     expect(diff.removed_table.summary).toEqual({
       added: 0,
       removed: 1,
@@ -183,5 +201,23 @@ describe('diffSnapshots', () => {
     })
     expect(diff.users.matchingStrategy).toBe('auto')
     expect(diff.users.keyColumns).toEqual(['uuid'])
+  })
+
+  it('tracks added and removed columns at the table shape level', () => {
+    const diff = diffSnapshots(
+      {
+        products: [{ id: 1, name: 'Widget', price: 10, archived_at: null }],
+      },
+      {
+        products: [{ id: 1, name: 'Widget', price: 12, category: 'tools' }],
+      },
+    )
+
+    expect(diff.products.shape).toEqual({
+      leftColumns: ['id', 'name', 'price', 'archived_at'],
+      rightColumns: ['id', 'name', 'price', 'category'],
+      addedColumns: ['category'],
+      removedColumns: ['archived_at'],
+    })
   })
 })

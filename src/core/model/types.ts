@@ -26,9 +26,17 @@ export interface TableSummary {
   unchanged: number
 }
 
+export interface TableShapeSummary {
+  leftColumns: string[]
+  rightColumns: string[]
+  addedColumns: string[]
+  removedColumns: string[]
+}
+
 export interface TableDiff {
   status: TableStatus
   columns: string[]
+  shape: TableShapeSummary
   rows: RowDiff[]
   summary: TableSummary
   keyColumns: string[]
