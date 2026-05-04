@@ -221,23 +221,6 @@ function formatValue(value: unknown): string {
 
         <div class="toolbar-actions" v-if="activeView === 'input'">
           <button
-            class="button button-secondary"
-            type="button"
-            @click="showParsedPreview = !showParsedPreview"
-          >
-            {{
-              showParsedPreview ? "Hide parsed preview" : "Show parsed preview"
-            }}
-          </button>
-          <button
-            class="button button-secondary"
-            type="button"
-            @click="previewSnapshots"
-            :disabled="busy"
-          >
-            Parse now
-          </button>
-          <button
             class="button"
             type="button"
             @click="runDiff"
@@ -338,13 +321,33 @@ function formatValue(value: unknown): string {
         </div>
       </section>
 
-      <details
-        v-if="showParsedPreview || (leftPreview && rightPreview)"
-        class="panel panel-tight preview-panel"
-        :open="showParsedPreview"
-      >
-        <summary class="panel-summary">Parsed preview</summary>
-        <div class="preview-grid compact-grid">
+      <section class="panel panel-tight preview-panel print-block-avoid">
+        <div class="panel-header slim preview-header">
+          <div>
+            <h2>Parsed preview</h2>
+            <p>Parse the current SQL inputs into the normalized snapshot structure.</p>
+          </div>
+
+          <div class="panel-header-actions">
+            <button
+              class="button button-secondary"
+              type="button"
+              @click="showParsedPreview = !showParsedPreview"
+            >
+              {{ showParsedPreview ? "Hide preview" : "Show preview" }}
+            </button>
+            <button
+              class="button button-secondary"
+              type="button"
+              @click="previewSnapshots"
+              :disabled="busy"
+            >
+              Parse now
+            </button>
+          </div>
+        </div>
+
+        <div v-if="showParsedPreview && leftPreview && rightPreview" class="preview-grid compact-grid">
           <article>
             <div class="panel-header slim compact">
               <h2>Snapshot A</h2>
@@ -358,7 +361,11 @@ function formatValue(value: unknown): string {
             <pre>{{ JSON.stringify(rightPreview, null, 2) }}</pre>
           </article>
         </div>
-      </details>
+
+        <div v-else-if="showParsedPreview" class="preview-empty">
+          <p>No parsed preview yet. Click <code>Parse now</code> to inspect the current inputs.</p>
+        </div>
+      </section>
     </section>
 
     <section v-else-if="diff && stats" class="panel-stack">
@@ -398,7 +405,8 @@ function formatValue(value: unknown): string {
           </label>
 
           <div>
-            <span>Status</span>
+            <span>Table status</span>
+            <div class="filter-help">counts below are tables, not rows</div>
             <div
               class="filter-pills"
               role="radiogroup"
