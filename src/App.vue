@@ -81,36 +81,6 @@ const snapshotHelpTemplates: SnapshotHelpSnippet[] = [
   },
 ]
 
-const snapshotRecipeTemplates: SnapshotRecipeSnippet[] = [
-  {
-    id: 'local-recipe',
-    method: 'local',
-    title: 'Multiple tables on local machine',
-    summary:
-      'Use repeated --table flags when you want one snapshot file with several focused tables.',
-    command:
-      'export PGPASSWORD="$DB_PASSWORD" && pg_dump --username "$DB_USER" --host "127.0.0.1" --port "5432" --data-only --format=plain --column-inserts --table "public.users" --table "public.orders" "$DB_NAME" > multi-table-snapshot.sql',
-  },
-  {
-    id: 'remote-recipe',
-    method: 'remote',
-    title: 'Multiple tables on remote host',
-    summary:
-      'Same idea as local, but with explicit host and port for remote PostgreSQL.',
-    command:
-      'export PGPASSWORD="$DB_PASSWORD" && pg_dump --username "$DB_USER" --host "$DB_HOST" --port "$DB_PORT" --data-only --format=plain --column-inserts --table "public.users" --table "public.orders" "$DB_NAME" > remote-multi-table-snapshot.sql',
-  },
-  {
-    id: 'docker-recipe',
-    method: 'docker',
-    title: 'Multiple tables in Docker',
-    summary:
-      'Run pg_dump in the container, but still write one combined SQL file on the host.',
-    command:
-      'docker exec -e PGPASSWORD="$DB_PASSWORD" postgres-container pg_dump --username "$DB_USER" --dbname "$DB_NAME" --data-only --format=plain --column-inserts --table "public.users" --table "public.orders" > docker-multi-table-snapshot.sql',
-  },
-]
-
 const filter = ref<'all' | TableStatus>('all')
 const search = ref('')
 const showUnchangedRows = ref(false)
@@ -134,9 +104,6 @@ const focusedTableName = ref<string | null>(null)
 const copiedHelpSnippetId = ref<string | null>(null)
 const helpSnippets = ref(
   snapshotHelpTemplates.map((snippet) => ({ ...snippet })),
-)
-const recipeSnippets = ref(
-  snapshotRecipeTemplates.map((snippet) => ({ ...snippet })),
 )
 
 const tableStatusCounts = computed(() => {
@@ -390,20 +357,6 @@ function resetHelpSnippet(snippetId: SnapshotMethodId) {
   )
 }
 
-function resetRecipeSnippet(snippetId: SnapshotRecipeSnippet['id']) {
-  const template = snapshotRecipeTemplates.find(
-    (snippet) => snippet.id === snippetId,
-  )
-
-  if (!template) {
-    return
-  }
-
-  recipeSnippets.value = recipeSnippets.value.map((snippet) =>
-    snippet.id === snippetId ? { ...template } : snippet,
-  )
-}
-
 function buildTableFlagLines(tableNames: string[]) {
   return tableNames.map((tableName) => `--table "${tableName}"`).join(' ')
 }
@@ -423,28 +376,6 @@ function applyCurrentTablesToSnippet(snippetId: SnapshotMethodId) {
     return {
       ...snippet,
       command: snippet.command.replace('--table "$DB_TABLE"', tableFlags),
-    }
-  })
-}
-
-function applyCurrentTablesToRecipe(snippetId: SnapshotRecipeSnippet['id']) {
-  if (currentTableNames.value.length === 0) {
-    return
-  }
-
-  const tableFlags = buildTableFlagLines(currentTableNames.value)
-
-  recipeSnippets.value = recipeSnippets.value.map((snippet) => {
-    if (snippet.id !== snippetId) {
-      return snippet
-    }
-
-    return {
-      ...snippet,
-      command: snippet.command.replace(
-        '--table "public.users" --table "public.orders"',
-        tableFlags,
-      ),
     }
   })
 }
