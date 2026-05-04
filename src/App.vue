@@ -40,6 +40,8 @@ const showChangedColumnsOnly = ref(false)
 const showParsedPreview = ref(false)
 const leftDropActive = ref(false)
 const rightDropActive = ref(false)
+const openColumnMenu = ref<string | null>(null)
+const hiddenColumnsByTable = ref<Record<string, string[]>>({})
 
 const tableStatusCounts = computed(() => {
   if (!diff.value) {
@@ -94,9 +96,14 @@ function rowData(row: RowDiff) {
   return row.dataB ?? row.dataA ?? {}
 }
 
-function visibleColumns(table: TableDiff) {
+function visibleColumns(tableName: string, table: TableDiff) {
+  const hiddenColumns = new Set(hiddenColumnsByTable.value[tableName] ?? [])
+  const manuallyVisibleColumns = table.columns.filter(
+    (column) => !hiddenColumns.has(column),
+  )
+
   if (!showChangedColumnsOnly.value) {
-    return table.columns
+    return manuallyVisibleColumns
   }
 
   const changed = new Set(table.keyColumns)
@@ -115,9 +122,39 @@ function visibleColumns(table: TableDiff) {
     }
   }
 
-  return table.columns.filter(
+  return manuallyVisibleColumns.filter(
     (column) => changed.has(column) || table.keyColumns.includes(column),
   )
+}
+
+function isColumnVisible(tableName: string, column: string) {
+  return !(hiddenColumnsByTable.value[tableName] ?? []).includes(column)
+}
+
+function toggleColumnMenu(tableName: string) {
+  openColumnMenu.value = openColumnMenu.value === tableName ? null : tableName
+}
+
+function toggleColumn(tableName: string, column: string) {
+  const hiddenColumns = new Set(hiddenColumnsByTable.value[tableName] ?? [])
+
+  if (hiddenColumns.has(column)) {
+    hiddenColumns.delete(column)
+  } else {
+    hiddenColumns.add(column)
+  }
+
+  hiddenColumnsByTable.value = {
+    ...hiddenColumnsByTable.value,
+    [tableName]: [...hiddenColumns],
+  }
+}
+
+function resetColumnVisibility(tableName: string) {
+  hiddenColumnsByTable.value = {
+    ...hiddenColumnsByTable.value,
+    [tableName]: [],
+  }
 }
 
 async function loadSqlFile(
@@ -475,11 +512,51 @@ function formatValue(value: unknown): string {
             }}</span>
           </div>
 
-          <div class="table-summary-metrics">
-            <span>+{{ table.summary.added }}</span>
-            <span>-{{ table.summary.removed }}</span>
-            <span>~{{ table.summary.modified }}</span>
-            <span>={{ table.summary.unchanged }}</span>
+          <div class="table-summary-actions">
+            <div class="table-summary-metrics">
+              <span>+{{ table.summary.added }}</span>
+              <span>-{{ table.summary.removed }}</span>
+              <span>~{{ table.summary.modified }}</span>
+              <span>={{ table.summary.unchanged }}</span>
+            </div>
+
+            <div class="column-menu-wrap print-hidden" @click.stop>
+              <button
+                class="icon-button"
+                type="button"
+                aria-label="Choose visible columns"
+                :aria-expanded="openColumnMenu === tableName"
+                @click.stop.prevent="toggleColumnMenu(tableName)"
+              >
+                ⋯
+              </button>
+
+              <div v-if="openColumnMenu === tableName" class="column-menu">
+                <div class="column-menu-header">
+                  <strong>Columns</strong>
+                  <button
+                    class="mini-link"
+                    type="button"
+                    @click.stop="resetColumnVisibility(tableName)"
+                  >
+                    Reset
+                  </button>
+                </div>
+
+                <label
+                  v-for="column in table.columns"
+                  :key="column"
+                  class="column-toggle"
+                >
+                  <input
+                    :checked="isColumnVisible(tableName, column)"
+                    type="checkbox"
+                    @change="toggleColumn(tableName, column)"
+                  />
+                  <span>{{ column }}</span>
+                </label>
+              </div>
+            </div>
           </div>
         </summary>
 
@@ -492,7 +569,10 @@ function formatValue(value: unknown): string {
             <thead>
               <tr>
                 <th>Status</th>
-                <th v-for="column in visibleColumns(table)" :key="column">
+                <th
+                  v-for="column in visibleColumns(tableName, table)"
+                  :key="column"
+                >
                   {{ column }}
                 </th>
               </tr>
@@ -508,7 +588,10 @@ function formatValue(value: unknown): string {
                     row.status
                   }}</span>
                 </td>
-                <td v-for="column in visibleColumns(table)" :key="column">
+                <td
+                  v-for="column in visibleColumns(tableName, table)"
+                  :key="column"
+                >
                   <template v-if="row.changes[column]">
                     <div class="cell-change">
                       <span class="value from">{{
