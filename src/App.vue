@@ -8,7 +8,6 @@ import { useDiffSession } from './composables/useDiffSession'
 import { usePrintView } from './composables/usePrintView'
 
 const {
-  activeView,
   busy,
   diff,
   error,
@@ -20,12 +19,97 @@ const {
   rightSql,
   runDiff,
   previewSnapshots,
-  showDiff,
-  showInput,
   stats,
 } = useDiffSession()
 
 const printView = usePrintView()
+
+type SnapshotMethodId = 'local' | 'remote' | 'docker'
+
+interface SnapshotHelpSnippet {
+  id: SnapshotMethodId
+  title: string
+  summary: string
+  tips: string[]
+  command: string
+}
+
+interface SnapshotRecipeSnippet {
+  id: `${SnapshotMethodId}-recipe`
+  method: SnapshotMethodId
+  title: string
+  summary: string
+  command: string
+}
+
+const snapshotHelpTemplates: SnapshotHelpSnippet[] = [
+  {
+    id: 'local',
+    title: 'Local machine',
+    summary:
+      'For PostgreSQL running directly on your machine or reachable from localhost.',
+    tips: [
+      'Use the same table list and flags for both snapshots so the diff stays comparable.',
+      'Schema-qualify tables like public.users when possible.',
+      'Redirect output to a file, then paste or upload that file into Diffie.',
+    ],
+    command: `export PGPASSWORD="$DB_PASSWORD" pg_dump --username "$DB_USER" --host "127.0.0.1" --port "5432" --data-only --format=plain --column-inserts --table "$DB_TABLE" "$DB_NAME" > snapshot.sql`,
+  },
+  {
+    id: 'remote',
+    title: 'Remote host',
+    summary:
+      'For a PostgreSQL instance on a custom host, IP, or non-default port.',
+    tips: [
+      'Confirm your firewall / VPN / SSH tunnel first.',
+      'Keep the output plain SQL so it can be inspected and reused easily.',
+      'If you need multiple tables, repeat --table or remove it for a broader dump.',
+    ],
+    command: `export PGPASSWORD="$DB_PASSWORD" pg_dump --username "$DB_USER" --host "$DB_HOST" --port "$DB_PORT" --data-only --format=plain --column-inserts --table "$DB_TABLE" "$DB_NAME" > remote-snapshot.sql`,
+  },
+  {
+    id: 'docker',
+    title: 'Docker container',
+    summary:
+      'For PostgreSQL running inside Docker, where pg_dump executes in the container.',
+    tips: [
+      'Replace postgres-container with your real container name.',
+      'The redirect happens on the host machine, so the output file is created locally.',
+      'If the container lacks pg_dump, run the command from a separate postgres image instead.',
+    ],
+    command: `docker exec -e PGPASSWORD="$DB_PASSWORD" postgres-container pg_dump --username "$DB_USER" --dbname "$DB_NAME" --data-only --format=plain --column-inserts --table "$DB_TABLE" > docker-snapshot.sql`,
+  },
+]
+
+const snapshotRecipeTemplates: SnapshotRecipeSnippet[] = [
+  {
+    id: 'local-recipe',
+    method: 'local',
+    title: 'Multiple tables on local machine',
+    summary:
+      'Use repeated --table flags when you want one snapshot file with several focused tables.',
+    command:
+      'export PGPASSWORD="$DB_PASSWORD" && pg_dump --username "$DB_USER" --host "127.0.0.1" --port "5432" --data-only --format=plain --column-inserts --table "public.users" --table "public.orders" "$DB_NAME" > multi-table-snapshot.sql',
+  },
+  {
+    id: 'remote-recipe',
+    method: 'remote',
+    title: 'Multiple tables on remote host',
+    summary:
+      'Same idea as local, but with explicit host and port for remote PostgreSQL.',
+    command:
+      'export PGPASSWORD="$DB_PASSWORD" && pg_dump --username "$DB_USER" --host "$DB_HOST" --port "$DB_PORT" --data-only --format=plain --column-inserts --table "public.users" --table "public.orders" "$DB_NAME" > remote-multi-table-snapshot.sql',
+  },
+  {
+    id: 'docker-recipe',
+    method: 'docker',
+    title: 'Multiple tables in Docker',
+    summary:
+      'Run pg_dump in the container, but still write one combined SQL file on the host.',
+    command:
+      'docker exec -e PGPASSWORD="$DB_PASSWORD" postgres-container pg_dump --username "$DB_USER" --dbname "$DB_NAME" --data-only --format=plain --column-inserts --table "public.users" --table "public.orders" > docker-multi-table-snapshot.sql',
+  },
+]
 
 const filter = ref<'all' | TableStatus>('all')
 const search = ref('')
@@ -40,12 +124,20 @@ const statusOptions: Array<'all' | TableStatus> = [
 const showChangedColumnsOnly = ref(false)
 const showParsedPreview = ref(false)
 const parsedPreviewMode = ref<'diff' | 'raw'>('diff')
+const pageView = ref<'input' | 'help' | 'diff'>('input')
 const leftDropActive = ref(false)
 const rightDropActive = ref(false)
 const openColumnMenu = ref<string | null>(null)
 const hiddenColumnsByTable = ref<Record<string, string[]>>({})
 const diffViewMode = ref<'overview' | 'details'>('overview')
 const focusedTableName = ref<string | null>(null)
+const copiedHelpSnippetId = ref<string | null>(null)
+const helpSnippets = ref(
+  snapshotHelpTemplates.map((snippet) => ({ ...snippet })),
+)
+const recipeSnippets = ref(
+  snapshotRecipeTemplates.map((snippet) => ({ ...snippet })),
+)
 
 const tableStatusCounts = computed(() => {
   if (!diff.value) {
@@ -111,6 +203,24 @@ const rightPreviewText = computed(() =>
 const parsedPreviewDiff = computed(() =>
   buildLineDiff(leftPreviewText.value, rightPreviewText.value),
 )
+
+const currentTableNames = computed(() => {
+  const names = new Set<string>()
+
+  if (leftPreview.value) {
+    Object.keys(leftPreview.value).forEach((tableName) => names.add(tableName))
+  }
+
+  if (rightPreview.value) {
+    Object.keys(rightPreview.value).forEach((tableName) => names.add(tableName))
+  }
+
+  if (diff.value) {
+    Object.keys(diff.value).forEach((tableName) => names.add(tableName))
+  }
+
+  return [...names].sort()
+})
 
 function visibleRows(table: TableDiff) {
   return showUnchangedRows.value
@@ -232,6 +342,113 @@ function setDropActive(side: 'left' | 'right', value: boolean) {
   rightDropActive.value = value
 }
 
+function showInputPage() {
+  pageView.value = 'input'
+}
+
+function showHelpPage() {
+  pageView.value = 'help'
+}
+
+function showDiffPage() {
+  if (hasDiff.value) {
+    pageView.value = 'diff'
+  }
+}
+
+async function runDiffAndShowPage() {
+  await runDiff()
+
+  if (!error.value && hasDiff.value) {
+    pageView.value = 'diff'
+  }
+}
+
+async function copyHelpSnippet(
+  snippet: SnapshotHelpSnippet | SnapshotRecipeSnippet,
+) {
+  await navigator.clipboard.writeText(snippet.command)
+  copiedHelpSnippetId.value = snippet.id
+  window.setTimeout(() => {
+    if (copiedHelpSnippetId.value === snippet.id) {
+      copiedHelpSnippetId.value = null
+    }
+  }, 1500)
+}
+
+function resetHelpSnippet(snippetId: SnapshotMethodId) {
+  const template = snapshotHelpTemplates.find(
+    (snippet) => snippet.id === snippetId,
+  )
+
+  if (!template) {
+    return
+  }
+
+  helpSnippets.value = helpSnippets.value.map((snippet) =>
+    snippet.id === snippetId ? { ...template } : snippet,
+  )
+}
+
+function resetRecipeSnippet(snippetId: SnapshotRecipeSnippet['id']) {
+  const template = snapshotRecipeTemplates.find(
+    (snippet) => snippet.id === snippetId,
+  )
+
+  if (!template) {
+    return
+  }
+
+  recipeSnippets.value = recipeSnippets.value.map((snippet) =>
+    snippet.id === snippetId ? { ...template } : snippet,
+  )
+}
+
+function buildTableFlagLines(tableNames: string[]) {
+  return tableNames.map((tableName) => `--table "${tableName}"`).join(' ')
+}
+
+function applyCurrentTablesToSnippet(snippetId: SnapshotMethodId) {
+  if (currentTableNames.value.length === 0) {
+    return
+  }
+
+  const tableFlags = buildTableFlagLines(currentTableNames.value)
+
+  helpSnippets.value = helpSnippets.value.map((snippet) => {
+    if (snippet.id !== snippetId) {
+      return snippet
+    }
+
+    return {
+      ...snippet,
+      command: snippet.command.replace('--table "$DB_TABLE"', tableFlags),
+    }
+  })
+}
+
+function applyCurrentTablesToRecipe(snippetId: SnapshotRecipeSnippet['id']) {
+  if (currentTableNames.value.length === 0) {
+    return
+  }
+
+  const tableFlags = buildTableFlagLines(currentTableNames.value)
+
+  recipeSnippets.value = recipeSnippets.value.map((snippet) => {
+    if (snippet.id !== snippetId) {
+      return snippet
+    }
+
+    return {
+      ...snippet,
+      command: snippet.command.replace(
+        '--table "public.users" --table "public.orders"',
+        tableFlags,
+      ),
+    }
+  })
+}
+
 function showOverview() {
   diffViewMode.value = 'overview'
   focusedTableName.value = null
@@ -287,24 +504,32 @@ function formatValue(value: unknown): string {
       <div class="app-header-main">
         <div>
           <p class="eyebrow">Diffie</p>
-          <h1>PostgreSQL snapshot diff</h1>
+          <h1>Schema Diffs</h1>
         </div>
 
         <nav class="view-switch" aria-label="Primary views">
           <button
             class="view-switch-button"
-            :data-active="activeView === 'input'"
+            :data-active="pageView === 'help'"
             type="button"
-            @click="showInput"
+            @click="showHelpPage"
+          >
+            Help
+          </button>
+          <button
+            class="view-switch-button"
+            :data-active="pageView === 'input'"
+            type="button"
+            @click="showInputPage"
           >
             Input
           </button>
           <button
             class="view-switch-button"
-            :data-active="activeView === 'diff'"
+            :data-active="pageView === 'diff'"
             type="button"
             :disabled="!hasDiff"
-            @click="showDiff"
+            @click="showDiffPage"
           >
             Diff
             <span v-if="hasDiff && isDirty" class="inline-note">stale</span>
@@ -314,27 +539,27 @@ function formatValue(value: unknown): string {
 
       <div class="toolbar print-hidden">
         <p class="toolbar-note">
-          INSERT-first, local-only, browser-based.
+          run locally in your browser without remote data send.
           <span v-if="isDirty">Inputs changed since the last diff.</span>
         </p>
 
-        <div v-if="activeView === 'input'" class="toolbar-actions">
+        <div v-if="pageView === 'input'" class="toolbar-actions">
           <button
             class="button"
             type="button"
             :disabled="busy"
-            @click="runDiff"
+            @click="runDiffAndShowPage"
           >
             {{ busy ? 'Working…' : hasDiff ? 'Update diff' : 'Run diff' }}
             &rarr;
           </button>
         </div>
 
-        <div v-else class="toolbar-actions">
+        <div v-else-if="pageView === 'diff'" class="toolbar-actions">
           <button
             class="button button-secondary"
             type="button"
-            @click="showInput"
+            @click="showInputPage"
           >
             &larr; Edit input
           </button>
@@ -342,7 +567,7 @@ function formatValue(value: unknown): string {
             class="button"
             type="button"
             :disabled="busy"
-            @click="runDiff"
+            @click="runDiffAndShowPage"
           >
             {{ busy ? 'Working…' : isDirty ? 'Update diff' : 'Re-run diff' }}
           </button>
@@ -354,12 +579,22 @@ function formatValue(value: unknown): string {
             Print
           </button>
         </div>
+
+        <div v-else class="toolbar-actions">
+          <button
+            class="button button-secondary"
+            type="button"
+            @click="showInputPage"
+          >
+            Back to input &rarr;
+          </button>
+        </div>
       </div>
     </header>
 
     <p v-if="error" class="error-banner print-hidden">{{ error }}</p>
 
-    <section v-if="activeView === 'input'" class="panel-stack">
+    <section v-if="pageView === 'input'" class="panel-stack">
       <section class="panel panel-tight print-block-avoid">
         <div class="panel-header slim">
           <div>
@@ -532,7 +767,127 @@ function formatValue(value: unknown): string {
       </section>
     </section>
 
-    <section v-else-if="diff && stats" class="panel-stack">
+    <section v-else-if="pageView === 'help'" class="panel-stack help-stack">
+      <section class="panel panel-tight help-intro">
+        <div class="panel-header slim">
+          <div>
+            <h2>How to snapshot PostgreSQL for Diffie</h2>
+            <p>
+              Diffie works best when both snapshots are dumped with the same
+              table scope and flags. Start with <code>--data-only</code> and
+              <code>--column-inserts</code>, then paste or upload the resulting
+              SQL file.
+            </p>
+          </div>
+        </div>
+
+        <div class="help-grid compact-grid">
+          <article class="help-card">
+            <h3>Recommended defaults</h3>
+            <ul class="help-list">
+              <li>Use the same command shape for snapshot A and snapshot B.</li>
+              <li>Keep the dump plain SQL, not custom/binary format.</li>
+              <li>Schema-qualify tables like <code>public.users</code>.</li>
+              <li>Prefer focused dumps first so previews stay manageable.</li>
+            </ul>
+          </article>
+          <article class="help-card">
+            <h3>Flag notes</h3>
+            <ul class="help-list">
+              <li><code>--data-only</code> avoids schema noise.</li>
+              <li>
+                <code>--column-inserts</code> makes the SQL explicit and
+                parser-friendly.
+              </li>
+              <li><code>--table</code> can be repeated for multiple tables.</li>
+              <li>
+                <code>PGPASSWORD</code> is optional if your auth is already
+                configured.
+              </li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="help-current-tables">
+          <div>
+            <h3>Use my current table names</h3>
+            <p>
+              Diffie can reuse table names found in your parsed preview or diff.
+            </p>
+          </div>
+
+          <div v-if="currentTableNames.length" class="current-table-chip-list">
+            <span
+              v-for="tableName in currentTableNames"
+              :key="tableName"
+              class="shape-pill"
+            >
+              {{ tableName }}
+            </span>
+          </div>
+          <p v-else class="filter-help">
+            Parse snapshots or run a diff first, then come back here to inject
+            the current table names into the commands below.
+          </p>
+        </div>
+      </section>
+
+      <section
+        v-for="snippet in helpSnippets"
+        :key="snippet.id"
+        class="panel panel-tight help-card"
+      >
+        <div class="panel-header slim help-card-header">
+          <div>
+            <h2>{{ snippet.title }}</h2>
+            <p>{{ snippet.summary }}</p>
+          </div>
+          <div class="panel-header-actions">
+            <button
+              v-if="currentTableNames.length"
+              class="button button-secondary"
+              type="button"
+              @click="applyCurrentTablesToSnippet(snippet.id)"
+            >
+              Use current table names
+            </button>
+            <button
+              class="button button-secondary"
+              type="button"
+              @click="resetHelpSnippet(snippet.id)"
+            >
+              Reset snippet
+            </button>
+            <button
+              class="button button-secondary"
+              type="button"
+              @click="copyHelpSnippet(snippet)"
+            >
+              {{ copiedHelpSnippetId === snippet.id ? 'Copied' : 'Copy' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="help-body compact-grid">
+          <div class="help-notes">
+            <div class="help-subtitle">Tips</div>
+            <ul class="help-list">
+              <li v-for="tip in snippet.tips" :key="tip">{{ tip }}</li>
+            </ul>
+          </div>
+
+          <label class="help-snippet-editor">
+            <span class="help-subtitle">Editable command</span>
+            <textarea v-model="snippet.command" spellcheck="false" />
+          </label>
+        </div>
+      </section>
+    </section>
+
+    <section
+      v-else-if="pageView === 'diff' && diff && stats"
+      class="panel-stack"
+    >
       <section class="summary-strip print-block-avoid">
         <article class="metric-inline">
           <span>Tables</span>

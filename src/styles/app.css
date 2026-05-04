@@ -122,6 +122,7 @@ table,
 
 h1,
 h2,
+h3,
 p {
   margin: 0;
 }
@@ -383,6 +384,76 @@ pre {
   color: var(--text-mid);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.help-stack {
+  gap: 12px;
+}
+
+.help-grid,
+.help-body,
+.help-recipes-grid {
+  align-items: start;
+}
+
+.help-card {
+  display: grid;
+  gap: 10px;
+}
+
+.help-card-header,
+.help-recipe-head,
+.help-current-tables {
+  align-items: flex-start;
+}
+
+.help-current-tables,
+.help-recipe-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px 12px;
+}
+
+.help-card h3,
+.help-subtitle {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.help-subtitle {
+  margin-bottom: 8px;
+}
+
+.help-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-mid);
+}
+
+.help-list li + li {
+  margin-top: 6px;
+}
+
+.help-snippet-editor,
+.help-notes,
+.help-recipe {
+  display: grid;
+}
+
+.help-snippet-editor textarea,
+.help-recipe textarea {
+  min-height: 220px;
+}
+
+.current-table-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .parsed-diff {
