@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { toBlob } from 'html-to-image'
 
 import type { RowDiff, TableDiff, TableStatus } from './core/model/types'
 
@@ -101,6 +102,16 @@ const openColumnMenu = ref<string | null>(null)
 const hiddenColumnsByTable = ref<Record<string, string[]>>({})
 const diffViewMode = ref<'overview' | 'details'>('overview')
 const focusedTableName = ref<string | null>(null)
+const selectedRowPreview = ref<{
+  tableName: string
+  table: TableDiff
+  row: RowDiff
+} | null>(null)
+const rowPreviewCaptureElement = ref<HTMLElement | null>(null)
+const rowPreviewImageState = ref<'idle' | 'copying' | 'copied' | 'error'>(
+  'idle',
+)
+const rowPreviewCaptureTransparent = ref(false)
 const copiedHelpSnippetId = ref<string | null>(null)
 const helpSnippets = ref(
   snapshotHelpTemplates.map((snippet) => ({ ...snippet })),
@@ -397,6 +408,124 @@ function clearFocusedTable() {
   focusedTableName.value = null
 }
 
+function openRowPreview(tableName: string, table: TableDiff, row: RowDiff) {
+  selectedRowPreview.value = {
+    tableName,
+    table,
+    row,
+  }
+}
+
+function closeRowPreview() {
+  selectedRowPreview.value = null
+  rowPreviewImageState.value = 'idle'
+  rowPreviewCaptureTransparent.value = false
+}
+
+async function renderRowPreviewBlob() {
+  if (!rowPreviewCaptureElement.value) {
+    return null
+  }
+
+  rowPreviewCaptureTransparent.value = true
+
+  try {
+    return await toBlob(rowPreviewCaptureElement.value, {
+      cacheBust: true,
+      pixelRatio: 2,
+    })
+  } finally {
+    rowPreviewCaptureTransparent.value = false
+  }
+}
+
+async function copyRowPreviewAsImage() {
+  rowPreviewImageState.value = 'copying'
+
+  try {
+    const blob = await renderRowPreviewBlob()
+
+    if (!blob) {
+      throw new Error('Failed to render row preview image.')
+    }
+
+    if (
+      !navigator.clipboard ||
+      typeof ClipboardItem === 'undefined' ||
+      typeof navigator.clipboard.write !== 'function'
+    ) {
+      throw new Error('Clipboard image copy is not supported in this browser.')
+    }
+
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        [blob.type]: blob,
+      }),
+    ])
+
+    rowPreviewImageState.value = 'copied'
+  } catch {
+    rowPreviewImageState.value = 'error'
+  } finally {
+    window.setTimeout(() => {
+      if (rowPreviewImageState.value !== 'copying') {
+        rowPreviewImageState.value = 'idle'
+      }
+    }, 1800)
+  }
+}
+
+async function downloadRowPreviewAsImage() {
+  const blob = await renderRowPreviewBlob()
+
+  if (!blob || !selectedRowPreview.value) {
+    rowPreviewImageState.value = 'error'
+    return
+  }
+
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  const safeTableName = selectedRowPreview.value.tableName.replace(
+    /[^a-z0-9_-]+/gi,
+    '-',
+  )
+  const safeRowKey = selectedRowPreview.value.row.key.replace(
+    /[^a-z0-9_-]+/gi,
+    '-',
+  )
+
+  anchor.href = url
+  anchor.download = `${safeTableName}-${safeRowKey}-diagram.png`
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
+
+function rowPreviewCopyLabel() {
+  if (rowPreviewImageState.value === 'copying') {
+    return 'Copying…'
+  }
+
+  if (rowPreviewImageState.value === 'copied') {
+    return 'Copied'
+  }
+
+  if (rowPreviewImageState.value === 'error') {
+    return 'Copy failed'
+  }
+
+  return 'Copy diagram'
+}
+
+function rowPreviewImageHint() {
+  if (rowPreviewImageState.value === 'error') {
+    return 'Clipboard image copy may not be supported in this browser. Try Download PNG.'
+  }
+
+  return ''
+}
+
 function totalRows(table: TableDiff) {
   return (
     table.summary.added +
@@ -414,6 +543,42 @@ function rowBarWidth(count: number, table: TableDiff) {
   }
 
   return `${(count / total) * 100}%`
+}
+
+function previewColumns(tableName: string, table: TableDiff) {
+  return visibleColumns(tableName, table)
+}
+
+function previewLeftTitle(row: RowDiff) {
+  if (row.status === 'added') {
+    return 'before · missing'
+  }
+
+  return 'before'
+}
+
+function previewRightTitle(row: RowDiff) {
+  if (row.status === 'removed') {
+    return 'after · missing'
+  }
+
+  return 'after'
+}
+
+function previewCellState(row: RowDiff, column: string) {
+  if (row.changes[column]) {
+    return 'changed'
+  }
+
+  if (row.status === 'added') {
+    return 'added'
+  }
+
+  if (row.status === 'removed') {
+    return 'removed'
+  }
+
+  return 'same'
 }
 
 function formatValue(value: unknown): string {
@@ -1128,6 +1293,8 @@ function formatValue(value: unknown): string {
                 v-for="row in visibleRows(table)"
                 :key="row.key"
                 :data-row-status="row.status"
+                class="row-clickable"
+                @click="openRowPreview(tableName, table, row)"
               >
                 <td>
                   <span class="status-pill compact" :data-status="row.status">{{
@@ -1160,5 +1327,129 @@ function formatValue(value: unknown): string {
         </div>
       </details>
     </section>
+
+    <div
+      v-if="selectedRowPreview"
+      class="dialog-backdrop print-hidden"
+      @click="closeRowPreview"
+    >
+      <section
+        class="dialog-panel row-preview-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Row transition preview"
+        @click.stop
+      >
+        <header class="dialog-header">
+          <div>
+            <p class="eyebrow">Row preview</p>
+            <h2>{{ selectedRowPreview.tableName }}</h2>
+            <p class="filter-help">
+              {{ selectedRowPreview.row.key }} ·
+              {{ selectedRowPreview.row.status }}
+            </p>
+            <p
+              v-if="rowPreviewImageHint()"
+              class="filter-help row-preview-hint"
+            >
+              {{ rowPreviewImageHint() }}
+            </p>
+          </div>
+          <div class="panel-header-actions">
+            <button
+              class="button button-secondary"
+              type="button"
+              :disabled="rowPreviewImageState === 'copying'"
+              @click="copyRowPreviewAsImage"
+            >
+              {{ rowPreviewCopyLabel() }}
+            </button>
+            <button
+              class="button button-secondary"
+              type="button"
+              :disabled="rowPreviewImageState === 'copying'"
+              @click="downloadRowPreviewAsImage"
+            >
+              Download PNG
+            </button>
+            <button
+              class="button button-secondary"
+              type="button"
+              @click="closeRowPreview"
+            >
+              Close
+            </button>
+          </div>
+        </header>
+
+        <div
+          ref="rowPreviewCaptureElement"
+          class="row-preview-flow row-preview-capture"
+          :data-transparent-capture="rowPreviewCaptureTransparent"
+        >
+          <section
+            class="entity-card"
+            :data-side="
+              selectedRowPreview.row.status === 'added' ? 'missing' : 'before'
+            "
+          >
+            <div class="entity-card-head">
+              <span class="meta-pill">{{
+                previewLeftTitle(selectedRowPreview.row)
+              }}</span>
+            </div>
+            <div class="entity-fields">
+              <div
+                v-for="column in previewColumns(
+                  selectedRowPreview.tableName,
+                  selectedRowPreview.table,
+                )"
+                :key="`before-${column}`"
+                class="entity-field"
+                :data-state="previewCellState(selectedRowPreview.row, column)"
+              >
+                <span class="entity-key">{{ column }}</span>
+                <span class="entity-value">{{
+                  formatValue(selectedRowPreview.row.dataA?.[column])
+                }}</span>
+              </div>
+            </div>
+          </section>
+
+          <div class="entity-arrow" aria-hidden="true">
+            <span>→</span>
+          </div>
+
+          <section
+            class="entity-card"
+            :data-side="
+              selectedRowPreview.row.status === 'removed' ? 'missing' : 'after'
+            "
+          >
+            <div class="entity-card-head">
+              <span class="meta-pill">{{
+                previewRightTitle(selectedRowPreview.row)
+              }}</span>
+            </div>
+            <div class="entity-fields">
+              <div
+                v-for="column in previewColumns(
+                  selectedRowPreview.tableName,
+                  selectedRowPreview.table,
+                )"
+                :key="`after-${column}`"
+                class="entity-field"
+                :data-state="previewCellState(selectedRowPreview.row, column)"
+              >
+                <span class="entity-key">{{ column }}</span>
+                <span class="entity-value">{{
+                  formatValue(selectedRowPreview.row.dataB?.[column])
+                }}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
   </main>
 </template>

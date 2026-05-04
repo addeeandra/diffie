@@ -1009,6 +1009,14 @@ tr[data-row-status='modified'] {
   background: rgba(196, 165, 106, 0.08);
 }
 
+.row-clickable {
+  cursor: pointer;
+}
+
+.row-clickable:hover {
+  background: var(--bg-hover) !important;
+}
+
 .cell-change {
   display: grid;
   gap: 2px;
@@ -1029,6 +1037,119 @@ tr[data-row-status='modified'] {
   color: #99c69b;
 }
 
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.68);
+}
+
+.dialog-panel {
+  width: min(1180px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.row-preview-hint {
+  margin-top: 6px;
+  max-width: 440px;
+}
+
+.row-preview-dialog {
+  display: grid;
+  gap: 0;
+}
+
+.row-preview-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  padding: 12px;
+}
+
+.row-preview-capture {
+  background: var(--bg-card);
+}
+
+.row-preview-capture[data-transparent-capture='true'] {
+  background: transparent;
+}
+
+.entity-card {
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.entity-card[data-side='missing'] {
+  opacity: 0.72;
+}
+
+.entity-card-head {
+  padding: 10px 10px 0;
+}
+
+.entity-fields {
+  display: grid;
+  gap: 0;
+  padding: 10px;
+}
+
+.entity-field {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.entity-field[data-state='changed'] {
+  background: rgba(196, 165, 106, 0.08);
+}
+
+.entity-field[data-state='added'] {
+  background: rgba(106, 170, 122, 0.08);
+}
+
+.entity-field[data-state='removed'] {
+  background: rgba(196, 106, 106, 0.08);
+}
+
+.entity-key {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.entity-value {
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.entity-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-size: 1.4rem;
+}
+
 @media (max-width: 960px) {
   .app-shell {
     width: min(100vw - 12px, 1480px);
@@ -1041,14 +1162,25 @@ tr[data-row-status='modified'] {
 
   .app-header-main,
   .toolbar,
-  .controls {
+  .controls,
+  .dialog-header,
+  .row-preview-flow {
     align-items: stretch;
     flex-direction: column;
   }
 
   .summary-strip,
   .compact-grid,
-  .overview-grid {
+  .overview-grid,
+  .row-preview-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .entity-arrow {
+    min-height: 32px;
+  }
+
+  .entity-field {
     grid-template-columns: 1fr;
   }
 

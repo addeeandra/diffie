@@ -18,6 +18,7 @@
     "verify": "pnpm lint && pnpm format:check && pnpm test && pnpm typecheck && pnpm build"
   },
   "dependencies": {
+    "html-to-image": "^1.11.13",
     "vue": "^3.5.32"
   },
   "devDependencies": {
