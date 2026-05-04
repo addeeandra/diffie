@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import type { RowDiff, TableDiff, TableStatus } from './core/model/types'
 
+import { buildLineDiff } from './core/diff/lineDiff'
 import { useDiffSession } from './composables/useDiffSession'
 import { usePrintView } from './composables/usePrintView'
 
@@ -38,6 +39,7 @@ const statusOptions: Array<'all' | TableStatus> = [
 ]
 const showChangedColumnsOnly = ref(false)
 const showParsedPreview = ref(false)
+const parsedPreviewMode = ref<'diff' | 'raw'>('diff')
 const leftDropActive = ref(false)
 const rightDropActive = ref(false)
 const openColumnMenu = ref<string | null>(null)
@@ -97,6 +99,18 @@ const detailTables = computed(() => {
     ([tableName]) => tableName === focusedTableName.value,
   )
 })
+
+const leftPreviewText = computed(() =>
+  leftPreview.value ? JSON.stringify(leftPreview.value, null, 2) : '',
+)
+
+const rightPreviewText = computed(() =>
+  rightPreview.value ? JSON.stringify(rightPreview.value, null, 2) : '',
+)
+
+const parsedPreviewDiff = computed(() =>
+  buildLineDiff(leftPreviewText.value, rightPreviewText.value),
+)
 
 function visibleRows(table: TableDiff) {
   return showUnchangedRows.value
@@ -417,6 +431,28 @@ function formatValue(value: unknown): string {
           </div>
 
           <div class="panel-header-actions">
+            <div
+              class="filter-pills"
+              role="tablist"
+              aria-label="Parsed preview mode"
+            >
+              <button
+                class="filter-pill"
+                :data-active="parsedPreviewMode === 'diff'"
+                type="button"
+                @click="parsedPreviewMode = 'diff'"
+              >
+                diff
+              </button>
+              <button
+                class="filter-pill"
+                :data-active="parsedPreviewMode === 'raw'"
+                type="button"
+                @click="parsedPreviewMode = 'raw'"
+              >
+                raw
+              </button>
+            </div>
             <button
               class="button button-secondary"
               type="button"
@@ -435,23 +471,57 @@ function formatValue(value: unknown): string {
           </div>
         </div>
 
-        <div
-          v-if="showParsedPreview && leftPreview && rightPreview"
-          class="preview-grid compact-grid"
-        >
-          <article>
-            <div class="panel-header slim compact">
-              <h2>Snapshot A</h2>
+        <template v-if="showParsedPreview && leftPreview && rightPreview">
+          <div v-if="parsedPreviewMode === 'diff'" class="parsed-diff">
+            <div class="parsed-diff-header">
+              <span>Parsed JSON diff</span>
+              <span class="filter-help"
+                >line-based preview diff, github-style</span
+              >
             </div>
-            <pre>{{ JSON.stringify(leftPreview, null, 2) }}</pre>
-          </article>
-          <article>
-            <div class="panel-header slim compact">
-              <h2>Snapshot B</h2>
+            <div class="parsed-diff-table-wrap">
+              <table class="parsed-diff-table">
+                <tbody>
+                  <tr
+                    v-for="(line, index) in parsedPreviewDiff"
+                    :key="`${line.type}-${line.leftNumber}-${line.rightNumber}-${index}`"
+                    :data-diff-line="line.type"
+                  >
+                    <td class="diff-gutter marker">
+                      {{
+                        line.type === 'added'
+                          ? '+'
+                          : line.type === 'removed'
+                            ? '-'
+                            : ' '
+                      }}
+                    </td>
+                    <td class="diff-gutter">{{ line.leftNumber ?? '' }}</td>
+                    <td class="diff-gutter">{{ line.rightNumber ?? '' }}</td>
+                    <td class="diff-content">
+                      <pre>{{ line.content }}</pre>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <pre>{{ JSON.stringify(rightPreview, null, 2) }}</pre>
-          </article>
-        </div>
+          </div>
+
+          <div v-else class="preview-grid compact-grid">
+            <article>
+              <div class="panel-header slim compact">
+                <h2>Snapshot A</h2>
+              </div>
+              <pre>{{ leftPreviewText }}</pre>
+            </article>
+            <article>
+              <div class="panel-header slim compact">
+                <h2>Snapshot B</h2>
+              </div>
+              <pre>{{ rightPreviewText }}</pre>
+            </article>
+          </div>
+        </template>
 
         <div v-else-if="showParsedPreview" class="preview-empty">
           <p>

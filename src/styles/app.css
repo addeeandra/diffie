@@ -385,6 +385,74 @@ pre {
   line-height: 1.5;
 }
 
+.parsed-diff {
+  border-top: 1px solid var(--border);
+}
+
+.parsed-diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  color: var(--text-dim);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.parsed-diff-table-wrap {
+  overflow: auto;
+}
+
+.parsed-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.parsed-diff-table td {
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.parsed-diff-table tr[data-diff-line='added'] {
+  background: rgba(106, 170, 122, 0.08);
+}
+
+.parsed-diff-table tr[data-diff-line='removed'] {
+  background: rgba(196, 106, 106, 0.08);
+}
+
+.parsed-diff-table tr[data-diff-line='context'] {
+  background: transparent;
+}
+
+.diff-gutter {
+  width: 42px;
+  padding: 6px 8px;
+  border-right: 1px solid var(--border);
+  color: var(--text-dim);
+  text-align: right;
+  user-select: none;
+}
+
+.diff-gutter.marker {
+  width: 28px;
+  text-align: center;
+}
+
+.diff-content {
+  width: auto;
+  padding: 0;
+}
+
+.diff-content pre {
+  padding: 6px 10px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .preview-empty {
   padding: 12px;
   color: var(--text-dim);
